@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Continuity 25A Viewer</title>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --border: #475569; --text: #e2e8f0; --text-dim: #94a3b8;
+    --accent: #38bdf8; --green: #4ade80; --amber: #fbbf24;
+    --red: #f87171; --purple: #a78bfa; --cyan: #22d3ee;
+    --indigo: #818cf8; --orange: #fb923c; --pink: #f472b6;
+    --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.5; }
+
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 24px; position:sticky; top:0; z-index:100; }
+  .header h1 { font-size:18px; font-weight:600; font-family:var(--mono); }
+  .header-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .header-stats { font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+  .header-stats span { margin-right:12px; }
+  .header-stats .num { color:var(--accent); font-weight:600; }
+
+  .search-bar { display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap; }
+  .search-input { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px 12px; color:var(--text); font-family:var(--mono); font-size:13px; width:320px; outline:none; }
+  .search-input:focus { border-color:var(--accent); }
+  .search-input::placeholder { color:var(--text-dim); }
+  .filter-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:4px 10px; color:var(--text-dim); font-size:12px; cursor:pointer; font-family:var(--mono); transition:all .15s; }
+  .filter-btn:hover { border-color:var(--accent); color:var(--text); }
+  .filter-btn.active { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
+  .filter-group { display:flex; align-items:center; gap:4px; }
+  .filter-group-label { font-size:10px; color:var(--text-dim); font-family:var(--mono); text-transform:uppercase; font-weight:600; margin-right:2px; }
+
+  .content { max-width:1200px; margin:0 auto; padding:16px 24px 80px; }
+
+  /* Phase */
+  .phase { margin-bottom:16px; }
+  .phase-header { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; cursor:pointer; user-select:none; transition:background .15s; }
+  .phase-header:hover { background:var(--surface2); }
+  .phase-code { font-family:var(--mono); font-weight:700; font-size:15px; color:var(--accent); min-width:32px; }
+  .phase-name { font-weight:600; flex:1; }
+  .phase-count { font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+  .phase-body { padding-left:8px; }
+
+  /* Section */
+  .section { margin:6px 0 6px 12px; }
+  .section-header { display:flex; align-items:center; gap:8px; padding:6px 12px; background:rgba(56,189,248,0.06); border-left:3px solid var(--accent); border-radius:0 6px 6px 0; cursor:pointer; user-select:none; transition:background .15s; }
+  .section-header:hover { background:rgba(56,189,248,0.12); }
+  .section-name { font-size:13px; font-weight:600; flex:1; }
+  .section-count { font-size:11px; color:var(--text-dim); font-family:var(--mono); }
+  .section-body { padding-left:12px; }
+  .section-note { font-size:11px; color:var(--text-dim); padding:2px 0 2px 24px; font-style:italic; }
+
+  .caret { display:inline-block; width:16px; text-align:center; font-size:12px; color:var(--text-dim); transition:transform .2s; flex-shrink:0; }
+  .caret.open { transform:rotate(90deg); }
+
+  /* Event */
+  .event { margin:4px 0 4px 16px; border:1px solid var(--border); border-radius:6px; background:var(--surface); overflow:hidden; }
+  .event.search-match { border-color:var(--amber); box-shadow:0 0 0 1px var(--amber); }
+  .event-header { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; user-select:none; transition:background .15s; }
+  .event-header:hover { background:var(--surface2); }
+  .ev-code { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--green); min-width:90px; flex-shrink:0; }
+  .ev-name { font-size:13px; flex:1; font-weight:500; }
+  .ev-aircraft { font-size:10px; font-family:var(--mono); padding:2px 6px; border-radius:4px; font-weight:600; background:rgba(74,222,128,0.15); color:var(--green); flex-shrink:0; }
+  .ev-duration { font-size:10px; font-family:var(--mono); padding:2px 6px; border-radius:4px; background:var(--bg); color:var(--text-dim); flex-shrink:0; }
+
+  /* Event body */
+  .event-body { border-top:1px solid var(--border); padding:10px 14px; }
+
+  /* Detail grid */
+  .detail-grid { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; margin-bottom:8px; }
+  .detail-label { color:var(--text-dim); font-family:var(--mono); font-weight:600; text-transform:uppercase; font-size:10px; padding-top:2px; }
+  .detail-value { color:var(--text); }
+  .detail-value.dim { color:var(--text-dim); font-style:italic; }
+
+  /* Tags */
+  .tag { display:inline-block; font-size:10px; font-family:var(--mono); padding:1px 6px; border-radius:3px; font-weight:600; margin:1px 2px; }
+  .tag-aircraft { background:rgba(74,222,128,0.15); color:var(--green); }
+  .tag-config { background:rgba(167,139,250,0.15); color:var(--purple); }
+  .tag-lox { background:rgba(251,191,36,0.15); color:var(--amber); }
+  .tag-cape { background:rgba(34,211,238,0.15); color:var(--cyan); }
+  .tag-qual { background:rgba(251,146,60,0.15); color:var(--orange); }
+  .tag-alt { background:rgba(248,113,113,0.15); color:var(--red); }
+
+  /* Crew list */
+  .crew-list { margin:0; padding:0; list-style:none; }
+  .crew-list li { font-size:12px; padding:1px 0; }
+  .crew-list li::before { content:'- '; color:var(--text-dim); }
+
+  /* Notes */
+  .notes-list { margin:0; padding:0; list-style:none; }
+  .notes-list li { font-size:11px; color:var(--text-dim); padding:1px 0; line-height:1.5; }
+
+  /* Prerequisites */
+  .prereqs-toggle { display:flex; align-items:center; gap:6px; padding:6px 0; cursor:pointer; user-select:none; font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+  .prereqs-toggle:hover { color:var(--text); }
+  .prereqs-count { color:var(--accent); font-weight:600; }
+  .prereqs-list { padding:0; }
+  .prereq-item { padding:4px 12px; margin:3px 0; background:var(--bg); border-radius:4px; border-left:3px solid var(--border); font-size:12px; }
+
+  .collapsible { display:none; }
+  .collapsible.open { display:block; }
+
+  .loading { text-align:center; padding:60px; color:var(--text-dim); font-family:var(--mono); }
+  .loading .spinner { display:inline-block; width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:12px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .error { background:rgba(248,113,113,0.1); border:1px solid var(--red); padding:16px; border-radius:8px; margin:24px; color:var(--red); font-family:var(--mono); }
+
+  .expand-controls { display:flex; gap:8px; }
+  .expand-btn { background:none; border:1px solid var(--border); border-radius:4px; padding:3px 10px; color:var(--text-dim); font-size:11px; cursor:pointer; font-family:var(--mono); }
+  .expand-btn:hover { border-color:var(--accent); color:var(--text); }
+
+  .no-events { font-size:12px; color:var(--text-dim); padding:4px 24px; font-style:italic; }
+
+  ::-webkit-scrollbar { width:8px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--surface2); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <h1 id="title">Continuity 25A Viewer</h1>
+    <div class="header-stats" id="stats"></div>
+    <div class="expand-controls">
+      <button class="expand-btn" onclick="expandAll()">Expand All</button>
+      <button class="expand-btn" onclick="collapseAll()">Collapse All</button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="search" type="text" placeholder="Search events, codes, aircraft, notes..." oninput="handleSearch(this.value)">
+    <div class="filter-group"><span class="filter-group-label">Phase:</span><span id="phase-filters"></span></div>
+  </div>
+</div>
+
+<div class="content" id="content">
+  <div class="loading"><div class="spinner"></div><br>Loading Continuity 25A data...</div>
+</div>
+
+<script>
+// --- Configuration ---
+const DATA_PATH = 'data/Continuity-25A';
+const PHASE_FILES = [
+  { id: 'CF', file: 'continuity-CF.json', label: 'CF' },
+  { id: 'FQ', file: 'continuity-FQ.json', label: 'FQ' },
+  { id: 'PF', file: 'continuity-PF.json', label: 'PF' },
+  { id: 'SY', file: 'continuity-SY.json', label: 'SY' },
+  { id: 'TF', file: 'continuity-TF.json', label: 'TF' },
+];
+
+let allPhases = []; // normalized: { id, name, classCode, sections: [{ name, note?, events }] }
+let activePhaseFilters = new Set(PHASE_FILES.map(p => p.id));
+let searchTerm = '';
+
+// Normalize the two different JSON structures into a common shape
+function normalize(id, raw) {
+  if (raw.sections) {
+    // Standard: CF, SY, TF, PF
+    return {
+      id,
+      name: raw.sheet || id,
+      classCode: raw.classCode || '25A',
+      sections: raw.sections.map(s => ({
+        name: s.name,
+        events: s.events || []
+      }))
+    };
+  } else if (raw.sheets) {
+    // FQ: sheets object with named sub-sheets
+    const sections = [];
+    for (const [sheetName, sheetData] of Object.entries(raw.sheets)) {
+      sections.push({
+        name: sheetName,
+        note: sheetData.note || null,
+        events: sheetData.events || []
+      });
+    }
+    return {
+      id,
+      name: 'Flying Qualities',
+      classCode: '25A',
+      sections
+    };
+  }
+  return { id, name: id, classCode: '25A', sections: [] };
+}
+
+async function loadData() {
+  try {
+    const results = await Promise.all(
+      PHASE_FILES.map(p =>
+        fetch(`${DATA_PATH}/${p.file}`).then(r => {
+          if (!r.ok) throw new Error(`Failed to load ${p.file}`);
+          return r.json();
+        }).then(raw => normalize(p.id, raw))
+      )
+    );
+    allPhases = results;
+    renderStats();
+    renderFilters();
+    renderAll();
+  } catch (e) {
+    document.getElementById('content').innerHTML =
+      `<div class="error">Error loading data: ${e.message}<br><br>
+       Make sure the data directory exists at <code>${DATA_PATH}/</code></div>`;
+  }
+}
+
+function renderStats() {
+  let events = 0, sections = 0;
+  allPhases.forEach(p => {
+    p.sections.forEach(s => {
+      sections++;
+      events += s.events.length;
+    });
+  });
+  document.getElementById('stats').innerHTML =
+    `<span><span class="num">${allPhases.length}</span> phases</span>` +
+    `<span><span class="num">${sections}</span> sections</span>` +
+    `<span><span class="num">${events}</span> events</span>`;
+}
+
+function renderFilters() {
+  document.getElementById('phase-filters').innerHTML = PHASE_FILES.map(p =>
+    `<button class="filter-btn active" onclick="togglePhaseFilter('${p.id}',this)">${p.label}</button>`
+  ).join('');
+}
+
+function togglePhaseFilter(id, btn) {
+  if (activePhaseFilters.has(id)) { activePhaseFilters.delete(id); btn.classList.remove('active'); }
+  else { activePhaseFilters.add(id); btn.classList.add('active'); }
+  renderAll();
+}
+
+function handleSearch(val) {
+  searchTerm = val.toLowerCase().trim();
+  renderAll();
+}
+
+function matchesSearch(ev) {
+  if (!searchTerm) return true;
+  const s = searchTerm;
+  const code = toStr(ev.eventCode);
+  return code.toLowerCase().includes(s) ||
+    (ev.missionName && ev.missionName.toLowerCase().includes(s)) ||
+    (ev.missionSubtitle && ev.missionSubtitle.toLowerCase().includes(s)) ||
+    toStr(ev.aircraftType).toLowerCase().includes(s) ||
+    (ev.crew && ev.crew.some(c => c.toLowerCase().includes(s))) ||
+    (ev.notes && ev.notes.some(n => n.toLowerCase().includes(s))) ||
+    (ev.prerequisites && ev.prerequisites.some(p => p.toLowerCase().includes(s))) ||
+    (ev.missionDetails && toStr(ev.missionDetails).toLowerCase().includes(s));
+}
+
+function renderAll() {
+  const container = document.getElementById('content');
+  let html = '';
+
+  allPhases.forEach(phase => {
+    if (!activePhaseFilters.has(phase.id)) return;
+
+    const totalEvents = phase.sections.reduce((s, sec) => s + sec.events.length, 0);
+    const filteredEvents = phase.sections.reduce((s, sec) =>
+      s + sec.events.filter(ev => matchesSearch(ev)).length, 0);
+
+    if (filteredEvents === 0 && searchTerm) return;
+
+    const isOpen = searchTerm ? true : false;
+    const countLabel = searchTerm
+      ? `${filteredEvents} / ${totalEvents} events`
+      : `${totalEvents} events`;
+
+    html += `<div class="phase">`;
+    html += `<div class="phase-header" onclick="toggle(this)">
+      <span class="caret${isOpen ? ' open' : ''}">&#9654;</span>
+      <span class="phase-code">${esc(phase.id)}</span>
+      <span class="phase-name">${esc(phase.name)}</span>
+      <span class="phase-count">${countLabel}</span>
+    </div>`;
+    html += `<div class="collapsible phase-body${isOpen ? ' open' : ''}">`;
+
+    phase.sections.forEach(sec => {
+      const secEvents = sec.events.filter(ev => matchesSearch(ev));
+      if (secEvents.length === 0 && searchTerm) return;
+
+      const secOpen = searchTerm ? true : false;
+      const secCount = searchTerm
+        ? `${secEvents.length} / ${sec.events.length}`
+        : `${sec.events.length}`;
+
+      html += `<div class="section">`;
+      html += `<div class="section-header" onclick="toggle(this)">
+        <span class="caret${secOpen ? ' open' : ''}">&#9654;</span>
+        <span class="section-name">${esc(sec.name)}</span>
+        <span class="section-count">${secCount} events</span>
+      </div>`;
+      html += `<div class="collapsible section-body${secOpen ? ' open' : ''}">`;
+
+      if (sec.note) {
+        html += `<div class="section-note">${esc(sec.note)}</div>`;
+      }
+
+      sec.events.forEach(ev => {
+        if (!matchesSearch(ev)) return;
+        const isMatch = searchTerm && matchesSearch(ev);
+        html += renderEvent(ev, isMatch);
+      });
+
+      html += `</div></div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  if (!html) {
+    html = '<div class="loading" style="color:var(--text-dim)">No matching events found</div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderEvent(ev, isMatch) {
+  const code = toStr(ev.eventCode);
+  const aircraft = toStr(ev.aircraftType);
+  const dur = formatDuration(ev.duration);
+
+  let h = `<div class="event${isMatch ? ' search-match' : ''}">`;
+
+  // Header
+  h += `<div class="event-header" onclick="toggle(this)">`;
+  h += `<span class="caret">&#9654;</span>`;
+  h += `<span class="ev-code">${esc(code)}</span>`;
+  h += `<span class="ev-name">${esc(ev.missionName || '')}`;
+  if (ev.missionSubtitle) h += ` <span style="color:var(--text-dim);font-size:11px">(${esc(ev.missionSubtitle)})</span>`;
+  h += `</span>`;
+  if (aircraft) h += `<span class="ev-aircraft">${esc(aircraft)}</span>`;
+  if (dur) h += `<span class="ev-duration">${esc(dur)}</span>`;
+  h += `</div>`;
+
+  // Body
+  h += `<div class="collapsible event-body${isMatch ? ' open' : ''}">`;
+  h += `<div class="detail-grid">`;
+
+  // Alt event code
+  if (ev.altEventCode) {
+    h += `<span class="detail-label">Alt Code</span>`;
+    h += `<span class="detail-value"><span class="tag tag-alt">${esc(ev.altEventCode)}</span></span>`;
+  }
+
+  // Mission details (FQ)
+  if (ev.missionDetails) {
+    h += `<span class="detail-label">Details</span>`;
+    h += `<span class="detail-value">${esc(toStr(ev.missionDetails))}</span>`;
+  }
+
+  // Aircraft + config
+  if (aircraft) {
+    h += `<span class="detail-label">Aircraft</span>`;
+    h += `<span class="detail-value"><span class="tag tag-aircraft">${esc(aircraft)}</span>`;
+    if (ev.aircraftVariant) h += ` <span style="color:var(--text-dim)">(${esc(ev.aircraftVariant)})</span>`;
+    h += `</span>`;
+  }
+
+  if (ev.config) {
+    h += `<span class="detail-label">Config</span>`;
+    h += `<span class="detail-value">${formatArray(ev.config).map(c => `<span class="tag tag-config">${esc(c)}</span>`).join(' ')}</span>`;
+  }
+
+  // Duration
+  if (ev.duration !== null && ev.duration !== undefined) {
+    h += `<span class="detail-label">Duration</span>`;
+    h += `<span class="detail-value">${esc(dur)}</span>`;
+  }
+
+  // LOX
+  if (ev.lox) {
+    h += `<span class="detail-label">LOX</span>`;
+    h += `<span class="detail-value">${formatArray(ev.lox).map(l => `<span class="tag tag-lox">${esc(l)}</span>`).join(' ')}</span>`;
+  }
+
+  // Aircrew quals
+  if (ev.aircrewQuals) {
+    h += `<span class="detail-label">Quals</span>`;
+    h += `<span class="detail-value">${formatArray(ev.aircrewQuals).map(q => `<span class="tag tag-qual">${esc(q)}</span>`).join(' ')}</span>`;
+  }
+
+  // Required/Desired Cape
+  if (ev.aircraftRequiredCape) {
+    h += `<span class="detail-label">Req Cape</span>`;
+    h += `<span class="detail-value"><span class="tag tag-cape">${esc(ev.aircraftRequiredCape)}</span></span>`;
+  }
+  if (ev.aircraftDesiredCape) {
+    h += `<span class="detail-label">Des Cape</span>`;
+    h += `<span class="detail-value"><span class="tag tag-cape">${esc(ev.aircraftDesiredCape)}</span></span>`;
+  }
+
+  h += `</div>`;
+
+  // Crew
+  if (ev.crew && ev.crew.length > 0) {
+    h += `<div style="margin-bottom:6px"><span class="detail-label" style="display:block;margin-bottom:2px">Crew</span>`;
+    h += `<ul class="crew-list">`;
+    ev.crew.forEach(c => { h += `<li>${esc(c)}</li>`; });
+    h += `</ul></div>`;
+  }
+
+  // Notes
+  if (ev.notes && ev.notes.length > 0) {
+    h += `<div style="margin-bottom:6px"><span class="detail-label" style="display:block;margin-bottom:2px">Notes</span>`;
+    h += `<ul class="notes-list">`;
+    ev.notes.forEach(n => { h += `<li>${esc(n)}</li>`; });
+    h += `</ul></div>`;
+  }
+
+  // Prerequisites
+  const prereqs = ev.prerequisites || [];
+  if (prereqs.length > 0) {
+    h += `<div class="prereqs-toggle" onclick="togglePrereqs(this, event)">
+      <span class="caret">&#9654;</span>
+      Prerequisites <span class="prereqs-count">(${prereqs.length})</span>
+    </div>`;
+    h += `<div class="collapsible prereqs-list">`;
+    prereqs.forEach(pr => {
+      h += `<div class="prereq-item">${esc(pr)}</div>`;
+    });
+    h += `</div>`;
+  }
+
+  h += `</div></div>`;
+  return h;
+}
+
+// --- Helpers ---
+
+function toStr(val) {
+  if (val === null || val === undefined) return '';
+  if (Array.isArray(val)) return val.join(', ');
+  return String(val);
+}
+
+function formatArray(val) {
+  if (val === null || val === undefined) return [];
+  if (Array.isArray(val)) {
+    // Flatten nested arrays
+    return val.map(v => Array.isArray(v) ? v.join(', ') : String(v));
+  }
+  return [String(val)];
+}
+
+function formatDuration(d) {
+  if (d === null || d === undefined) return '';
+  if (typeof d === 'string') return d; // "ASD", "TBD"
+  if (typeof d === 'number') {
+    const hrs = Math.floor(d);
+    const mins = Math.round((d - hrs) * 60);
+    if (hrs === 0) return `${mins}m`;
+    if (mins === 0) return `${hrs}h`;
+    return `${hrs}h ${mins}m`;
+  }
+  return String(d);
+}
+
+function toggle(headerEl) {
+  const body = headerEl.nextElementSibling;
+  const caret = headerEl.querySelector('.caret');
+  if (body && body.classList.contains('collapsible')) {
+    body.classList.toggle('open');
+    if (caret) caret.classList.toggle('open');
+  }
+}
+
+function togglePrereqs(toggleEl, e) {
+  e.stopPropagation();
+  const list = toggleEl.nextElementSibling;
+  const caret = toggleEl.querySelector('.caret');
+  if (list && list.classList.contains('collapsible')) {
+    list.classList.toggle('open');
+    if (caret) caret.classList.toggle('open');
+  }
+}
+
+function expandAll() {
+  document.querySelectorAll('.collapsible').forEach(el => el.classList.add('open'));
+  document.querySelectorAll('.caret').forEach(el => el.classList.add('open'));
+}
+
+function collapseAll() {
+  document.querySelectorAll('.collapsible').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.caret').forEach(el => el.classList.remove('open'));
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadData();
+</script>
+</body>
+</html>
