@@ -256,7 +256,7 @@
           "aircraftType": "T-38",
           "aircraftVariant": "T-38C",
           "config": null,
-          "duration": 1.0,
+          "duration": 1,
           "crew": [
             "IP w/4 STUD ABM/FTE/CSO"
           ],
@@ -283,7 +283,7 @@
           "aircraftType": "T-38",
           "aircraftVariant": "T-38C",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "IP/2-3 STUD PILOTS"
           ],
@@ -473,7 +473,7 @@
           "aircraftType": "Learjet",
           "aircraftVariant": "LJ-25",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "*IP w/ STUD ABM/CSO/RPA",
             "IP w/ 2 ABM/CSO/RPA IN FQ SIM A/B",
@@ -507,7 +507,7 @@
           "aircraftType": "Learjet",
           "aircraftVariant": "LJ-25",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "*IP w/ STUD ABM/CSO/RPA",
             "IP w/ 2 ABM/CSO/RPA IN FQ SIM A/B",
@@ -540,7 +540,7 @@
           "aircraftType": "C-12",
           "aircraftVariant": "C-12C",
           "config": null,
-          "duration": 1.0,
+          "duration": 1,
           "crew": [
             "IP w/2 STUD FTE/ABM"
           ],
@@ -567,7 +567,7 @@
           "aircraftType": "C-12",
           "aircraftVariant": "C-12C",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "IP/2 STUD PILOT/RPA/CSO"
           ],
@@ -788,7 +788,7 @@
           "aircraftType": "C-12",
           "aircraftVariant": "C-12C",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "IP w/ 2 RPA"
           ],
@@ -815,7 +815,7 @@
           "aircraftType": "T-38",
           "aircraftVariant": "T-38C",
           "config": null,
-          "duration": 2.0,
+          "duration": 2,
           "crew": [
             "IP w/ 2-3 RPA"
           ],
@@ -1189,31 +1189,6 @@
           "sourceRows": [
             149,
             150
-          ]
-        },
-        {
-          "eventCode": "CF 6754FP",
-          "missionName": "F-16 CF-4",
-          "section": "F-16",
-          "aircraftType": "F-16",
-          "aircraftVariant": "F-16D",
-          "config": "FCL OR FWT",
-          "duration": 1.5,
-          "crew": [
-            "IP/STUD PILOT (DG PILOT)"
-          ],
-          "notes": [
-            "BRIEF 2+30 UHF/VHF MISSION FREQ, FORMATION"
-          ],
-          "prerequisites": [
-            "CF-3/ F-16 EP CHECKOUT"
-          ],
-          "aircrewQuals": null,
-          "aircraftRequiredCape": null,
-          "aircraftDesiredCape": null,
-          "sourceRows": [
-            152,
-            153
           ]
         },
         {
